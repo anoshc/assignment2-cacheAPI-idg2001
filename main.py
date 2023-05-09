@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify, send_file, make_resp
 import database
 from database import db
 from database import collection
+from database import client
 
 # Set the flask app
 app = Flask(__name__)
