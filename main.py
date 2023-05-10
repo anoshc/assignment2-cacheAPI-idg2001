@@ -17,7 +17,7 @@ def test():
 
 
 # * Recieve the contact file from the frontend form, må denne være en POST eller GET?
-@app.route('/formcontacts', method=['POST'])
+@app.route('/formcontacts', methods=['POST'])
 def formcontacts():
     # Retrive the uploaded file from the html form
     if request.method == 'POST':
@@ -48,6 +48,32 @@ def formcontacts():
     # 2. Sjekker om chache db har filen frontend trenger
     # 3. Viss ikke, hent filen fra backend
     # 4. Push GET requesten til frontenden
+
+
+
+
+# ! Dette er fra main-api, men måtte være i cachen også. Usikker om vi må endre disse eller ikke (evt sjekke om det fins i cahce-db, eller om man må hente fra main-api.)
+# * GET route '/contacts/<id>' - Shows one contact based on id (json)
+@app.route('/contacts/<id>', methods=['GET'])
+def getContacts(id):
+    result = collection.find_one({"_id": ObjectId(id)})
+    return f'{result}'
+
+
+# * GET route '/contacts/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf. 
+@app.route('/contacts/vcard', methods=['GET'])
+def getVCard():
+    json_parser()  # Runs when we type in the route in Postman
+    vcards_json = json_parser()
+    return jsonify(vcards_json) # Pushes the json to the Postman output
+    
+
+# * GET route '/contacts/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
+@app.route('/contacts/<id>/vcard', methods=['GET'])
+def getVCardId(id):
+    json_id_parser(id)
+    vcards_id_json = json_id_parser(id)
+    return jsonify(vcards_id_json)
 
 
 # Run the app on port 3001
