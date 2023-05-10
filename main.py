@@ -26,7 +26,7 @@ def test():
     return 'Hello world!'
 
 
-# * Recieve the contact file from the frontend form
+# * Recieve the contact file from the frontend form and send it to main-api
 @app.route('/formcontacts', methods=['POST'])
 def formcontacts():
 
