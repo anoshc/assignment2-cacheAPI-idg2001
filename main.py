@@ -2,13 +2,17 @@ from flask import Flask, render_template, request, jsonify, send_file, make_resp
 from bson.objectid import ObjectId
 import os
 import json
+from dotenv import load_dotenv
 from flask_cors import CORS
+import requests
 
 import database
 from database import db
 from database import collection
 from database import client
 from vcard_to_json_parser import vcard_parser
+
+load_dotenv()
 
 # Set the flask app
 app = Flask(__name__)
@@ -22,50 +26,25 @@ def test():
     return 'Hello world!'
 
 
-# * Recieve the contact file from the frontend form, må denne være en POST eller GET?
+# * Recieve the contact file from the frontend form and send it to main-api
 @app.route('/formcontacts', methods=['POST'])
 def formcontacts():
-    # Retrive the uploaded file from the html form
-    if request.method == 'POST':
-        uploaded_file = request.files['file']
-        # If the file is NOT empty, do this:
-        if uploaded_file.filename != '':
-            uploaded_file.save(uploaded_file.filename)  # Saves the file
-            vcard_parser(uploaded_file.filename)  # Parsing the file to JSON
-            #os.remove(uploaded_file.filename)  # Remove the vcf file locally
-            return 'File read successfully and uploaded to database!'
-        else:
-            return 'Could not read file, try again.'  # In case of error
+
+    #print('formcontacts')
     
-    # Push the file to the database
-    with open('data.json') as data:
-        file_data = json.load(data)
-        if isinstance(file_data, list):
-            collection.insert_many(file_data)
-        else:
-            collection.insert_one(file_data)
-        return jsonify(file_data)
-    # # Retrive the uploaded file from the html form
-    # if request.method == 'POST':
-    #     uploaded_file = request.files['file']
-    #     # If the file is NOT empty, do this:
-    #     if uploaded_file.filename != '':
-    #         uploaded_file.save(uploaded_file.filename)  # Saves the file
-    #         #os.remove(uploaded_file.filename)  # Remove the vcf file locally
-    #         return 'File read successfully and uploaded to database!'
-    #     else:
-    #         return 'Could not read file, try again.'  # In case of error
+    # Retrieve and set the uploaded file
+    uploaded_file = request.files['file']
+    #print(uploaded_file)
 
-    # # Push the uploaded file to the database
-    # with open(uploaded_file) as data:
-    #     uploaded_file = json.load(data)
-    #     if isinstance(uploaded_file, list):
-    #         collection.insert_many(uploaded_file)
-    #     else:
-    #         collection.insert_one(uploaded_file)
-    #     return uploaded_file
+    # Read the uploaded file
+    f = uploaded_file.read()
+    # See the uploaded file in the console
+    print(f) 
 
-    # En funksjonalitet som sender 'uploaded file' to backend (main api)
+    # Send the uploaded file to the main api endpoint
+    res = requests.post(os.environ['MAIN_API'] + '/contacts', files={'file': f})
+
+    return res.text 
 
 
 # * En GET request som henter ferdig parset fil fra cache databasen, men om den ikke finst i cache db, hent filen fra backend(main api).
@@ -78,8 +57,10 @@ def formcontacts():
 # * GET route '/contacts' endpoint - Show all contacts (json)
 @app.route('/contacts_cache', methods=['GET'])
 def getAllContacts():
-    result = collection.find()
-    return f' {(list(result))}'
+     # Get all the documents from the collection
+    all_contacts = list(collection.find({}))
+    # Convert ObjectId to string and remove _id field from each document
+    return jsonify(all_contacts)
 
 
 # ! Dette er fra main-api, men måtte være i cachen også. Usikker om vi må endre disse eller ikke (evt sjekke om det fins i cahce-db, eller om man må hente fra main-api.)
@@ -90,13 +71,13 @@ def getAllContacts():
     # return f'{result}'
 
 
-# * GET route '/contacts/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf. 
+# * GET route '/contacts/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf.
 # @app.route('/contacts_cache/vcard', methods=['GET'])
 # def getVCard():
     #json_parser()  # Runs when we type in the route in Postman
     #vcards_json = json_parser()
     #return jsonify(vcards_json) # Pushes the json to the Postman output
-    
+
 
 # * GET route '/contacts/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
 # @app.route('/contacts_cache/<id>/vcard', methods=['GET'])

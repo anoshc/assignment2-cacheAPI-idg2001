@@ -2,7 +2,8 @@ flask
 gunicorn
 pymongo
 dotenv
+flask-cors
+requests
 json
 bson
-flask-cors
 
