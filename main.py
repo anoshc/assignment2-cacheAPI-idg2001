@@ -2,13 +2,17 @@ from flask import Flask, render_template, request, jsonify, send_file, make_resp
 from bson.objectid import ObjectId
 import os
 import json
+from flask_cors import CORS
 
+import database
 from database import db
 from database import collection
 from database import client
 
 # Set the flask app
 app = Flask(__name__)
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 # * HOME route – Render the HTML form to the page
