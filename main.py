@@ -53,7 +53,7 @@ def formcontacts():
 
 
 
-# * En GET request som henter ferdig parset fil fra databasen, om den ikke finst i cache db, hent filen fra backend(main api).
+# * En GET request som henter ferdig parset fil fra cache databasen, men om den ikke finst i cache db, hent filen fra backend(main api).
 
 
 # * En POST request som tar den filen vi hentet fra cache db eller backend(main api), og sender til frontend
