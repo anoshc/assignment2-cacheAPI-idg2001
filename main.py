@@ -8,6 +8,7 @@ import database
 from database import db
 from database import collection
 from database import client
+from vcard_to_json_parser import vcard_parser
 
 # Set the flask app
 app = Flask(__name__)
@@ -30,19 +31,39 @@ def formcontacts():
         # If the file is NOT empty, do this:
         if uploaded_file.filename != '':
             uploaded_file.save(uploaded_file.filename)  # Saves the file
-            os.remove(uploaded_file.filename)  # Remove the vcf file locally
+            vcard_parser(uploaded_file.filename)  # Parsing the file to JSON
+            #os.remove(uploaded_file.filename)  # Remove the vcf file locally
             return 'File read successfully and uploaded to database!'
         else:
             return 'Could not read file, try again.'  # In case of error
-
-    # Push the uploaded file to the database
-    with open(uploaded_file) as data:
-        uploaded_file = json.load(data)
-        if isinstance(uploaded_file, list):
-            collection.insert_many(uploaded_file)
+    
+    # Push the file to the database
+    with open('data.json') as data:
+        file_data = json.load(data)
+        if isinstance(file_data, list):
+            collection.insert_many(file_data)
         else:
-            collection.insert_one(uploaded_file)
-        return uploaded_file
+            collection.insert_one(file_data)
+        return jsonify(file_data)
+    # # Retrive the uploaded file from the html form
+    # if request.method == 'POST':
+    #     uploaded_file = request.files['file']
+    #     # If the file is NOT empty, do this:
+    #     if uploaded_file.filename != '':
+    #         uploaded_file.save(uploaded_file.filename)  # Saves the file
+    #         #os.remove(uploaded_file.filename)  # Remove the vcf file locally
+    #         return 'File read successfully and uploaded to database!'
+    #     else:
+    #         return 'Could not read file, try again.'  # In case of error
+
+    # # Push the uploaded file to the database
+    # with open(uploaded_file) as data:
+    #     uploaded_file = json.load(data)
+    #     if isinstance(uploaded_file, list):
+    #         collection.insert_many(uploaded_file)
+    #     else:
+    #         collection.insert_one(uploaded_file)
+    #     return uploaded_file
 
     # En funksjonalitet som sender 'uploaded file' to backend (main api)
 
