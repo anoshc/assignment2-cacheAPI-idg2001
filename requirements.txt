@@ -4,3 +4,5 @@ pymongo
 dotenv
 json
 bson
+flask-cors
+
