@@ -17,7 +17,7 @@ def test():
 
 
 # * Recieve the contact file from the frontend form, må denne være en POST eller GET?
-@app.route('/formcontacts', method=['POST'])
+@app.route('/formcontacts', methods=['POST'])
 def formcontacts():
     # Retrive the uploaded file from the html form
     if request.method == 'POST':
