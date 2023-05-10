@@ -2,3 +2,5 @@ flask
 gunicorn
 pymongo
 dotenv
+json
+bson
