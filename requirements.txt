@@ -2,4 +2,7 @@ flask
 gunicorn
 pymongo
 dotenv
+json
+bson
 flask-cors
+
