@@ -7,17 +7,6 @@ from database import client
 # Set the flask app
 app = Flask(__name__)
 
-'''
-1. Skal få contact filen fra frontend og sende den videre til backend(main api) i en POST request. 
-   Skal også lagres i cach-databasen.
-
-2. Frontend sender en GET request av den ferdig parset filen i backend.
-   Da må cachen sjekke om den har filen lokalt, viss ikke, så må den hente filen fra backend(main api) POST?.
-
-3. 
-'''
-
-
 
 # * HOME route – Render the HTML form to the page
 @app.route('/')
@@ -48,15 +37,18 @@ def formcontacts():
             collection.insert_one(uploaded_file)
         return uploaded_file
 
-
-# * En ny POST request som sender 'uploaded file' to backend (main api)
+    # En funksjonalitet som sender 'uploaded file' to backend (main api)
 
 
 
 # * En GET request som henter ferdig parset fil fra cache databasen, men om den ikke finst i cache db, hent filen fra backend(main api).
 
+    # 1. Får en GET request fra frontend
+    # 2. Sjekker om chache db har filen frontend trenger
+    # 3. Viss ikke, hent filen fra backend
+    # 4. Push GET requesten til frontenden
 
-# * En POST request som tar den filen vi hentet fra cache db eller backend(main api), og sender til frontend
+
 
 
 # Run the app on port 3001
