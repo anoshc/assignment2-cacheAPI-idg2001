@@ -54,13 +54,11 @@ def formcontacts():
     # 3. Viss ikke, hent filen fra backend
     # 4. Push GET requesten til frontenden
 
-# * GET route '/contacts' endpoint - Show all contacts (json)
-@app.route('/contacts_cache', methods=['GET'])
-def getAllContacts():
-     # Get all the documents from the collection
-    all_contacts = list(collection.find({}))
-    # Convert ObjectId to string and remove _id field from each document
-    return jsonify(all_contacts)
+# * GET route '/contacts/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf. 
+@app.route('/contacts_cache/vcard', methods=['GET'])
+def getVCard():
+    res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+    return res.text
 
 
 # ! Dette er fra main-api, men måtte være i cachen også. Usikker om vi må endre disse eller ikke (evt sjekke om det fins i cahce-db, eller om man må hente fra main-api.)
