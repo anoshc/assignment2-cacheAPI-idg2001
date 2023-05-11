@@ -10,7 +10,6 @@ import database
 from database import db
 from database import collection
 from database import client
-from vcard_to_json_parser import vcard_parser
 
 load_dotenv()
 
