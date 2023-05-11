@@ -48,64 +48,51 @@ def formcontacts():
 
 
 
-# * GET route '/contacts/vcard' (vcard) – Get the file from CacheApi-db or MainApi-db.
-#! Vet ikke om den funker ennå.
+# * GET route '/contacts/vcard' (vcard) – Get the file from cacheApi database or mainAPI database, depending on id the cacheAPI got the requested data.
 @app.route('/contacts_cache/vcard', methods=['GET'])
 def getVCard():
-    # Check if requested data exists in cache database
+    # Check if data exists in cache database
     cache_data = list(collection.find())  
+
+    # Initialize hash variables
     cache_hash = ''
+    backend_hash = ''
 
     # If there is data in the cache database
     if cache_data:
+        # Get the hashing and data
         cache_data = cache_data[0]
         cache_hash = cache_data.get('hash', '')
         cache_data = cache_data.get('data', '')
         
-        # If data in cache has same hash as data in backend, return it
+        # Checks whether the cache_data retrieved from the cache database is not empty, and whether its hash value matches the hash value calculated using the hashlib library's sha256 algorithm.
         if cache_data and cache_hash == hashlib.sha256(cache_data.encode()).hexdigest():
-            return cache_data
+            print ('Cache data: ' + cache_data)
+            
+            # Then check if the backend_hash match with the catch_hash
+            if backend_hash != cache_hash:
 
-    # If data not found in cache or hash doesn't match, get it from backend
-    res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
-    backend_data = res.text
-    print(backend_data)
+                # If data not found in cache or the hash doesn't match, get data from backend
+                res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+                backend_data = res.text
+                print('Backend data:' + backend_data)
 
-    # Calculate hash of data from backend
-    backend_hash = hashlib.sha256(backend_data.encode()).hexdigest()
+                # Calculate hash of data from backend
+                backend_hash = hashlib.sha256(backend_data.encode()).hexdigest()
+                
+                # Remove old data from cacheAPI database
+                collection.delete_many({'name': 'vcard'})
 
-    # Update cache if data has changed
-    if backend_hash != cache_hash:
-        # Remove old data from cache
-        collection.delete_many({'name': 'vcard'})
+                # Save new data and hash to cacheAPI database
+                collection.insert_one({'name': 'vcard', 'data': backend_data, 'hash': backend_hash})
 
-        # Save new data and hash to cache
-        collection.insert_one({'name': 'vcard', 'data': backend_data, 'hash': backend_hash})
+                # Return data from backend to the frontend
+                return backend_data
+            
+            else:
+                # If the backend_hash and cache_hash matches, then return data from cacheAPI database
+                return cache_data
 
-    # Return data from backend
-    return backend_data
-
-    # else:
-    #     # If vcard is not found in cache, get it from main-api database
-    #     res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
-    #     vcard_data = res.text
-    #     print(vcard_data) #See the output in console
-
-    #     # Remove old vcard data from cache database
-    #     collection.delete_many({'name': 'vcard'})
-
-    #     # Save vcard to cache database
-    #     collection.insert_one({'name': 'vcard', 'data': vcard_data})
-
-    #     # Return vcard data
-    #     return vcard_data
-
-'''
-1. Må legge til at cachen skal lagre det den får fra backend (vcard filen) i cahce-databasen også. 
-2. Og vi må legge til en if-statement som sjekker om det brukeren spør om finnes i cache-databasen,
-    så send det til frontend, viss ikke så må den må hente det fra backend-databasen,
-    lagre i cahcen, og igjen sende til frontend.
-'''
 
 
 # # * GET route '/contacts_cache/<id>' - Shows one contact based on id (json)
