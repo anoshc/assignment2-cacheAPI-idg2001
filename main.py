@@ -51,21 +51,22 @@ def formcontacts():
 #! Vet ikke om den funker ennå.
 @app.route('/contacts_cache/vcard', methods=['GET'])
 def getVCard():
-    # Check if requested vcard exists in cache database
-    vcard = collection.find()
-    if vcard:
-        # If vcard is found in cache, return it
-        return f' {(list(vcard))}'
-    else:
-        # If vcard is not found in cache, get it from main-api
-        res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
-        vcard_data = res.text
+    # # Check if requested vcard exists in cache database
+    # vcard = list(collection.find())
+    # if vcard:
+    #     # If vcard is found in cache, return it
+    #     return f' {(list(vcard))}'
+    # else:
+    # If vcard is not found in cache, get it from main-api
+    res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+    vcard_data = res.text
+    print(vcard_data)
+    # Save vcard to cache database
+    collection.insert_one({'name': 'vcard', 'data': vcard_data})
 
-        # Save vcard to cache database (usikker på denne)
-        collection.insert_one({'name': 'vcard', 'data': vcard_data})
+    # Return vcard data
+    return vcard_data
 
-        # Return vcard data
-        return jsonify(vcard_data)
 '''
 1. Må legge til at cachen skal lagre det den får fra backend (vcard filen) i cahce-databasen også. 
 2. Og vi må legge til en if-statement som sjekker om det brukeren spør om finnes i cache-databasen,
@@ -74,61 +75,61 @@ def getVCard():
 '''
 
 
-# * GET route '/contacts_cache/<id>' - Shows one contact based on id (json)
-@app.route('/contacts_cache/<id>', methods=['GET'])
-def getContacts(id):
-    # Check cache database first
-    result = collection.find_one({"_id": ObjectId(id)})
-    if result:
-        return f'{result}'
+# # * GET route '/contacts_cache/<id>' - Shows one contact based on id (json)
+# @app.route('/contacts_cache/<id>', methods=['GET'])
+# def getContacts(id):
+#     # Check cache database first
+#     result = collection.find_one({"_id": ObjectId(id)})
+#     if result:
+#         return f'{result}'
     
-    # If not found in cache, fetch from main API
-    res = requests.get(f'{os.environ["MAIN_API"]}/contacts/{id}')
-    data = res.text
+#     # If not found in cache, fetch from main API
+#     res = requests.get(f'{os.environ["MAIN_API"]}/contacts/{id}')
+#     data = res.text
     
-    # Save to cache database
-    collection.insert_one({'_id': ObjectId(id), 'data': data})
+#     # Save to cache database
+#     collection.insert_one({'_id': ObjectId(id), 'data': data})
     
-    # Return the fetched data
-    return data
+#     # Return the fetched data
+#     return data
 
 
-# * GET route '/contacts_cache/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf.
-@app.route('/contacts_cache/vcard', methods=['GET'])
-def getVCard():
-    # Check cache database first
-    result = collection.find_one({'name': 'vcard'})
-    if result:
-        return jsonify(result['data'])
+# # * GET route '/contacts_cache/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf.
+# @app.route('/contacts_cache/vcard', methods=['GET'])
+# def getVCard():
+#     # Check cache database first
+#     result = collection.find_one({'name': 'vcard'})
+#     if result:
+#         return jsonify(result['data'])
     
-    # If not found in cache, fetch from main API and parse to vcard format
-    res = requests.get(f'{os.environ["MAIN_API"]}/contacts/vcard')
-    vcard_data = json_parser(res.text)
+#     # If not found in cache, fetch from main API and parse to vcard format
+#     res = requests.get(f'{os.environ["MAIN_API"]}/contacts/vcard')
+#     vcard_data = json_parser(res.text)
     
-    # Save to cache database
-    collection.insert_one({'name': 'vcard', 'data': vcard_data})
+#     # Save to cache database
+#     collection.insert_one({'name': 'vcard', 'data': vcard_data})
     
-    # Return the parsed vcard data
-    return jsonify(vcard_data)
+#     # Return the parsed vcard data
+#     return jsonify(vcard_data)
 
 
-# * GET route '/contacts_cache/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
-@app.route('/contacts_cache/<id>/vcard', methods=['GET'])
-def getVCardId(id):
-    # Check cache database first
-    result = collection.find_one({'name': f'vcard-{id}'})
-    if result:
-        return jsonify(result['data'])
+# # * GET route '/contacts_cache/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
+# @app.route('/contacts_cache/<id>/vcard', methods=['GET'])
+# def getVCardId(id):
+#     # Check cache database first
+#     result = collection.find_one({'name': f'vcard-{id}'})
+#     if result:
+#         return jsonify(result['data'])
     
-    # If not found in cache, fetch from main API and parse to vcard format
-    res = requests.get(f'{os.environ["MAIN_API"]}/contacts/{id}/vcard')
-    vcard_data = json_id_parser(res.text)
+#     # If not found in cache, fetch from main API and parse to vcard format
+#     res = requests.get(f'{os.environ["MAIN_API"]}/contacts/{id}/vcard')
+#     vcard_data = json_id_parser(res.text)
     
-    # Save to cache database
-    collection.insert_one({'name': f'vcard-{id}', 'data': vcard_data})
+#     # Save to cache database
+#     collection.insert_one({'name': f'vcard-{id}', 'data': vcard_data})
     
-    # Return the parsed vcard data
-    return jsonify(vcard_data)
+#     # Return the parsed vcard data
+#     return jsonify(vcard_data)
 
 
 # Run the app on port 3001

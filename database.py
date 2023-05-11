@@ -1,4 +1,5 @@
 import os
+import certifi
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -13,6 +14,6 @@ MONGO_URI = os.environ['MONGO_URI']
 MONGO_DB_NAME = os.environ['MONGO_DB_NAME']
 MONGO_COLLECTION_NAME = os.environ['MONGO_COLLECTION_NAME']
 
-client = MongoClient(MONGO_URI)
+client =  MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client[MONGO_DB_NAME]
 collection = db[MONGO_COLLECTION_NAME]
