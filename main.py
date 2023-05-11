@@ -10,7 +10,6 @@ import database
 from database import db
 from database import collection
 from database import client
-from vcard_to_json_parser import vcard_parser
 
 load_dotenv()
 
@@ -54,22 +53,29 @@ def formcontacts():
     # 3. Viss ikke, hent filen fra backend
     # 4. Push GET requesten til frontenden
 
-# * GET route '/contacts/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf. 
+# * GET route '/contacts/vcard' (vcard) – Get the file from main-api.
 @app.route('/contacts_cache/vcard', methods=['GET'])
 def getVCard():
     res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
     return res.text
 
+'''
+1. Må legge til at cachen skal lagre det den får fra backend (vcard filen) i cahce-databasen også. 
+2. Og vi må legge til en if-statement som sjekker om det brukeren spør om finnes i cache-databasen,
+    så send det til frontend, viss ikke så må den må hente det fra backend-databasen,
+    lagre i cahcen, og igjen sende til frontend.
+'''
+
 
 # ! Dette er fra main-api, men måtte være i cachen også. Usikker om vi må endre disse eller ikke (evt sjekke om det fins i cahce-db, eller om man må hente fra main-api.)
-# * GET route '/contacts/<id>' - Shows one contact based on id (json)
+# * GET route '/contacts_cache/<id>' - Shows one contact based on id (json)
 # @app.route('/contacts_cache/<id>', methods=['GET'])
 # def getContacts(id):
     # result = collection.find_one({"_id": ObjectId(id)})
     # return f'{result}'
 
 
-# * GET route '/contacts/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf.
+# * GET route '/contacts_cache/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf.
 # @app.route('/contacts_cache/vcard', methods=['GET'])
 # def getVCard():
     #json_parser()  # Runs when we type in the route in Postman
@@ -77,7 +83,7 @@ def getVCard():
     #return jsonify(vcards_json) # Pushes the json to the Postman output
 
 
-# * GET route '/contacts/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
+# * GET route '/contacts_cache/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
 # @app.route('/contacts_cache/<id>/vcard', methods=['GET'])
 # def getVCardId(id):
     # json_id_parser(id)
