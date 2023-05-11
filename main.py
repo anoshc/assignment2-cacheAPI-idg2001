@@ -5,6 +5,7 @@ import json
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
+import hashlib
 
 import database
 from database import db
@@ -47,25 +48,57 @@ def formcontacts():
 
 
 
-# * GET route '/contacts/vcard' (vcard) – Get the file from cache db or main-api.
+# * GET route '/contacts/vcard' (vcard) – Get the file from CacheApi-db or MainApi-db.
 #! Vet ikke om den funker ennå.
 @app.route('/contacts_cache/vcard', methods=['GET'])
 def getVCard():
-    # # Check if requested vcard exists in cache database
-    # vcard = list(collection.find())
-    # if vcard:
-    #     # If vcard is found in cache, return it
-    #     return f' {(list(vcard))}'
-    # else:
-    # If vcard is not found in cache, get it from main-api
-    res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
-    vcard_data = res.text
-    print(vcard_data)
-    # Save vcard to cache database
-    collection.insert_one({'name': 'vcard', 'data': vcard_data})
+    # Check if requested data exists in cache database
+    cache_data = list(collection.find())  
+    cache_hash = ''
 
-    # Return vcard data
-    return vcard_data
+    # If there is data in the cache database
+    if cache_data:
+        cache_data = cache_data[0]
+        cache_hash = cache_data.get('hash', '')
+        cache_data = cache_data.get('data', '')
+        
+        # If data in cache has same hash as data in backend, return it
+        if cache_data and cache_hash == hashlib.sha256(cache_data.encode()).hexdigest():
+            return cache_data
+
+    # If data not found in cache or hash doesn't match, get it from backend
+    res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+    backend_data = res.text
+    print(backend_data)
+
+    # Calculate hash of data from backend
+    backend_hash = hashlib.sha256(backend_data.encode()).hexdigest()
+
+    # Update cache if data has changed
+    if backend_hash != cache_hash:
+        # Remove old data from cache
+        collection.delete_many({'name': 'vcard'})
+
+        # Save new data and hash to cache
+        collection.insert_one({'name': 'vcard', 'data': backend_data, 'hash': backend_hash})
+
+    # Return data from backend
+    return backend_data
+
+    # else:
+    #     # If vcard is not found in cache, get it from main-api database
+    #     res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+    #     vcard_data = res.text
+    #     print(vcard_data) #See the output in console
+
+    #     # Remove old vcard data from cache database
+    #     collection.delete_many({'name': 'vcard'})
+
+    #     # Save vcard to cache database
+    #     collection.insert_one({'name': 'vcard', 'data': vcard_data})
+
+    #     # Return vcard data
+    #     return vcard_data
 
 '''
 1. Må legge til at cachen skal lagre det den får fra backend (vcard filen) i cahce-databasen også. 
