@@ -1,18 +1,25 @@
 from flask import Flask, render_template, request, jsonify, send_file, make_response
+from flask.json import JSONEncoder
 from bson.objectid import ObjectId
+from datetime import datetime, timedelta
 import os
 import json
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
-import hashlib
 
 import database
 from database import db
 from database import collection
+from database import collection2
 from database import client
+from vcard_to_json_parser import vcard_parser
+from json_to_vcard_parser import json_parser
+from json_to_vcard_id_parser import json_id_parser
+
 
 load_dotenv()
+
 
 # Set the flask app
 app = Flask(__name__)
@@ -26,130 +33,106 @@ def test():
     return 'Hello world!'
 
 
-# * Recieve the contact file from the frontend form and send it to main-api
+# * Recieve the contact file from the frontend form, parse it to json and insert it into the cacheAPI database, and then send it further to the mainAPI.
 @app.route('/formcontacts', methods=['POST'])
 def formcontacts():
 
-    #print('formcontacts')
-    
-    # Retrieve and set the uploaded file
-    uploaded_file = request.files['file']
-    #print(uploaded_file)
+     # Retrive the uploaded file from the HTML form
+    if request.method == 'POST':
 
-    # Read the uploaded file
-    f = uploaded_file.read()
-    # See the uploaded file in the console
-    print(f) 
+        # Get the file
+        uploaded_file = request.files.get('file')
 
-    # Send the uploaded file to the main api endpoint
-    res = requests.post(os.environ['MAIN_API'] + '/contacts', files={'file': f})
+        # If the file is NOT empty, do this:
+        if uploaded_file.filename != '':
+            uploaded_file.save(uploaded_file.filename)  # Saves the file
+            vcard_parser(uploaded_file.filename)  # Parsing the file to JSON
+            print(uploaded_file)
+            os.remove(uploaded_file.filename)  # Remove the vcf file locally
 
-    return res.text 
+    # Push the parsed file to the cacheAPI database (with timestamp)
+    with open('data.json') as data:
+        file_data = json.load(data)
+        timestamp = datetime.utcnow()
+
+        # If there are many instances, check timestamp and replace with new
+        if isinstance(file_data, list):
+            # Delete existing documents
+            collection.delete_many({})
+            # Insert new documents with timestamp
+            documents = [dict(doc, timestamp=timestamp) for doc in file_data]
+            collection.insert_many(documents)
+        
+        # If there are one instance, check timestamp and replace with new
+        else:
+            # Delete existing document
+            collection.delete_one({})
+            # Insert new document with timestamp
+            document = dict(file_data, timestamp=timestamp)
+            collection.insert_one(document)
+
+
+    # Send the parsed file 'data.json' further to the mainAPI endpoint.
+    with open('data.json') as data:
+        # Get the file
+        file_data = json.load(data)
+        # Set headers
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        # Make request
+        res = requests.post(os.environ['MAIN_API'] + '/contacts', json=file_data, headers=headers)
+        # Return request
+        return res.json()
 
 
 
 # * GET route '/contacts/vcard' (vcard) – Get the file from cacheApi database or mainAPI database, depending on id the cacheAPI got the requested data.
+# * It also deletes everything in the collection after 10 days, to prevent buildup and loss of speed.  
 @app.route('/contacts_cache/vcard', methods=['GET'])
 def getVCard():
-    # Check if data exists in cache database
-    cache_data = list(collection.find())  
 
-    # Initialize hash variables
-    cache_hash = ''
-    backend_hash = ''
+    # Check if data exists in cache database (the second collection (vCard_all))
+    cache_data = list(collection2.find())
 
-    # If there is data in the cache database
-    if cache_data:
-        # Get the hashing and data
-        cache_data = cache_data[0]
-        cache_hash = cache_data.get('hash', '')
-        cache_data = cache_data.get('data', '')
-        
-        # Checks whether the cache_data retrieved from the cache database is not empty, and whether its hash value matches the hash value calculated using the hashlib library's sha256 algorithm.
-        if cache_data and cache_hash == hashlib.sha256(cache_data.encode()).hexdigest():
-            print ('Cache data: ' + cache_data)
-            
-            # Then check if the backend_hash match with the catch_hash
-            if backend_hash != cache_hash:
+    # Create a TTL index that expires documents after 10 days
+    collection2.create_index("timestamp", expireAfterSeconds=864000)
 
-                # If data not found in cache or the hash doesn't match, get data from backend
-                res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
-                backend_data = res.text
-                print('Backend data:' + backend_data)
+    # Query the cache collection to see if it has any expired documents
+    expired_docs = collection2.find({"timestamp": {"$lt": datetime.utcnow() - timedelta(days=10)}})
 
-                # Calculate hash of data from backend
-                backend_hash = hashlib.sha256(backend_data.encode()).hexdigest()
-                
-                # Remove old data from cacheAPI database
-                collection.delete_many({'name': 'vcard'})
-
-                # Save new data and hash to cacheAPI database
-                collection.insert_one({'name': 'vcard', 'data': backend_data, 'hash': backend_hash})
-
-                # Return data from backend to the frontend
-                return backend_data
-            
-            else:
-                # If the backend_hash and cache_hash matches, then return data from cacheAPI database
-                return cache_data
+    # Delete any expired documents from the cache collection
+    for doc in expired_docs:
+        collection2.delete_one({"_id": doc["_id"]})
 
 
+    # If data is not found in cacheAPI database, get data from mainAPI 
+    if not cache_data:
+        res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+       
+        # Set the mainAPI data
+        mainapi_data = res.json()
+        # print('Backend data:', mainapi_data)
 
-# # * GET route '/contacts_cache/<id>' - Shows one contact based on id (json)
-# @app.route('/contacts_cache/<id>', methods=['GET'])
-# def getContacts(id):
-#     # Check cache database first
-#     result = collection.find_one({"_id": ObjectId(id)})
-#     if result:
-#         return f'{result}'
-    
-#     # If not found in cache, fetch from main API
-#     res = requests.get(f'{os.environ["MAIN_API"]}/contacts/{id}')
-#     data = res.text
-    
-#     # Save to cache database
-#     collection.insert_one({'_id': ObjectId(id), 'data': data})
-    
-#     # Return the fetched data
-#     return data
+        # Put it inside the cache database
+        if isinstance(mainapi_data, list):
+            documents = [dict(doc, timestamp=datetime.utcnow()) for doc in mainapi_data]
+            collection2.insert_many(documents)
+        else:
+            document = dict(mainapi_data, timestamp=datetime.utcnow())
+            collection2.insert_one(document)
+            cache_data = [document]
 
+    # Convert ObjectId instances to string before serializing to JSON
+    for doc in cache_data:
+        if '_id' in doc:
+            doc['_id'] = str(doc['_id'])
 
-# # * GET route '/contacts_cache/vcard' (vcard) – Parses the contacts in json back to vcf, and shows all contacts in vcf.
-# @app.route('/contacts_cache/vcard', methods=['GET'])
-# def getVCard():
-#     # Check cache database first
-#     result = collection.find_one({'name': 'vcard'})
-#     if result:
-#         return jsonify(result['data'])
-    
-#     # If not found in cache, fetch from main API and parse to vcard format
-#     res = requests.get(f'{os.environ["MAIN_API"]}/contacts/vcard')
-#     vcard_data = json_parser(res.text)
-    
-#     # Save to cache database
-#     collection.insert_one({'name': 'vcard', 'data': vcard_data})
-    
-#     # Return the parsed vcard data
-#     return jsonify(vcard_data)
+    # If the data exists in the cache database, return it to the user.
+    else:
+        return jsonify(cache_data)
 
 
-# # * GET route '/contacts_cache/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and shows that one contact in vcf.
-# @app.route('/contacts_cache/<id>/vcard', methods=['GET'])
-# def getVCardId(id):
-#     # Check cache database first
-#     result = collection.find_one({'name': f'vcard-{id}'})
-#     if result:
-#         return jsonify(result['data'])
-    
-#     # If not found in cache, fetch from main API and parse to vcard format
-#     res = requests.get(f'{os.environ["MAIN_API"]}/contacts/{id}/vcard')
-#     vcard_data = json_id_parser(res.text)
-    
-#     # Save to cache database
-#     collection.insert_one({'name': f'vcard-{id}', 'data': vcard_data})
-    
-#     # Return the parsed vcard data
-#     return jsonify(vcard_data)
 
 
 # Run the app on port 3001
