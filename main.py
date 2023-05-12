@@ -55,7 +55,7 @@ def formcontacts():
         file_data = json.load(data)
         timestamp = datetime.utcnow()
 
-        # If there are many instances
+        # If there are many instances, check timestamp and replace with new
         if isinstance(file_data, list):
             # Delete existing documents
             collection.delete_many({})
@@ -63,7 +63,7 @@ def formcontacts():
             documents = [dict(doc, timestamp=timestamp) for doc in file_data]
             collection.insert_many(documents)
         
-        # If there are one instance
+        # If there are one instance, check timestamp and replace with new
         else:
             # Delete existing document
             collection.delete_one({})
