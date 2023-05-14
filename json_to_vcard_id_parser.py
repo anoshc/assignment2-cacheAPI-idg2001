@@ -1,4 +1,5 @@
 # Denne parseren er inspirert fra IDG2001 Cloud Technologies Lab 3
+from database import collection2
 
 # * This function finds a collection object based on id, and parses it from json to vcard
 def json_id_parser(id):
@@ -9,33 +10,32 @@ def json_id_parser(id):
     from bson.objectid import ObjectId
 
     # Load the JSON object from the MongoDB colelction
-    data = collection.find_one({"_id": ObjectId(id)})
+    data = collection2.find_one({"_id": ObjectId(id)})
     
     # Create a vCard object
     vcard = vobject.vCard()
     
     # Set the properties from the MongoDB data
-    # The get() adds a default text if the item doesn't exsist.
-    vcard.add('birthday').value = data.get('birthday', 'No Birthday')
-    vcard.add('version').value = data.get('version', 'No Version')
-    vcard.add('name').value = data.get('name', 'No Name')
-    vcard.add('fn').value = data.get('first name', 'No First Name')
-    vcard.add('org').value = data.get('organisation', 'No Organisation')
-    vcard.add('tel').value = data.get('telefon', 'No Telefon')
-    vcard.add('email').value = data.get('email', 'No Email')
+    # The get() adds a default text if the item doesn't exist.
+    vcard_properties = {
+        'birthday': 'birthday',
+        'version': 'version',
+        'name': 'name',
+        'fn': 'first name',
+        'org': 'organisation',
+        'tel': 'telefon',
+        'email': 'email'
+    }
+    for vcard_property, mongo_property in vcard_properties.items():
+        value = data.get(mongo_property, f'No {vcard_property.capitalize()}')
+        vcard.add(vcard_property).value = value
+
     address = data.get('address')
     if address:
-        street = address.split(';')[2]
-        city = address.split(';')[3]
-        region = address.split(';')[4]
-        code = address.split(';')[5]
-        country = address.split(';')[6]
+        address_fields = address.split(';')[2:]
+        street, city, region, code, country = address_fields + ['']*(5 - len(address_fields))
         vcard.add('adr').value = vobject.vcard.Address(
-            street=street or '',
-            city=city or '',
-            region=region or '',
-            code=code or '',
-            country=country or ''
+            street=street, city=city, region=region, code=code, country=country
         )
 
     # Serialize the vCards to a list of strings in

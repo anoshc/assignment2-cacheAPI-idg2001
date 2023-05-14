@@ -1,39 +1,38 @@
+# Imports
+import requests
+import os
+import json
+import database
+
 from flask import Flask, render_template, request, jsonify, send_file, make_response
 from flask.json import JSONEncoder
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
-import os
-import json
 from dotenv import load_dotenv
 from flask_cors import CORS
-import requests
 
-import database
+# Database
 from database import db
 from database import collection
 from database import collection2
 from database import client
+
+# Parse functions
 from vcard_to_json_parser import vcard_parser
-from json_to_vcard_parser import json_parser
 from json_to_vcard_id_parser import json_id_parser
 
-
+# Load dotenv
 load_dotenv()
-
 
 # Set the flask app
 app = Flask(__name__)
 
+# Make the app accept all requests
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 
-# * HOME route – Render the HTML form to the page (kan slettes)
-@app.route('/')
-def test():
-    return 'Hello world!'
 
-
-# * Recieve the contact file from the frontend form, parse it to json and insert it into the cacheAPI database, and then send it further to the mainAPI.
+# * POST route '/formcontacts' endpoint - Recieve the uploaded file from frontend and parses it to json. Add timestamp and push it to cacheAPI database (replace it of there already are data in it). Send the parsed file to mainAPI endpoint.
 @app.route('/formcontacts', methods=['POST'])
 def formcontacts():
 
@@ -108,7 +107,6 @@ def getVCardCache():
     for doc in expired_docs:
         collection2.delete_one({"_id": doc["_id"]})
 
-
     # If data is not found in cacheAPI database, get data from mainAPI 
     if not cache_data:
         
@@ -144,6 +142,69 @@ def getVCardCache():
 
 
 
+# * GET route '/contacts_cache' endpoint - Show all contacts (json)
+@app.route('/contacts_cache', methods=['GET'])
+def getAllContactsCache():
+    # Set headers
+    headers = {
+        'X-API-Key': 'get-key'
+    }   
+    # Send request with headers
+    res = requests.get(os.environ['MAIN_API'] + '/contacts', headers=headers)
+    
+    # Return result
+    return res.text
 
-# Run the app on port 3001
+
+# * GET route '/contacts_cache/<id>' - Shows one contact based on id (json)
+@app.route('/contacts_cache/<id>', methods=['GET'])
+def getContactsCache(id):
+    # Check if data based on id exists in cache database (collection vCard)
+    cache_data_id = collection.find_one({"_id": ObjectId(id)})
+
+    # If you fint id in database, then return it.
+    if cache_data_id:
+        return f'{cache_data_id}'
+
+    # If not, get result from mainAPI
+    else:
+        # Set headers
+        headers = {
+            'X-API-Key': 'get-id-key'
+        }   
+        # Send request with headers
+        res = requests.get(os.environ['MAIN_API'] + f'/contacts/{id}', headers=headers)
+    
+        # Return response
+        return res.text
+
+
+# * GET route '/contacts_cache/id/vcard' (vcard) – Parses one contact (based on id) in json back to vcf, and returns the parsed output.
+@app.route('/contacts_cache/<id>/vcard', methods=['GET'])
+def getVCardIdCache(id):
+    # Check if data based on id exists in cache database (collection vCard_all)
+    cache_data_id = collection2.find_one({"_id": ObjectId(id)})
+
+    # If you find id in database, then return it.
+    if cache_data_id:
+        # Parse it
+        json_id_parser(id)
+        vcards_id_json = json_id_parser(id)
+        # Return output
+        return jsonify(vcards_id_json)
+
+    # If you don't find id, then make request to mainAPI
+    else:
+        # Set headers
+        headers = {
+            'X-API-Key': 'get-id-key'
+        }   
+        # Send request with headers
+        res = requests.get(os.environ['MAIN_API'] + f'/contacts/{id}/vcard', headers=headers)
+    
+        # Return response
+        return res.text
+
+
+# Run the cacheAPI app on port 3001
 app.run(port=3001)
