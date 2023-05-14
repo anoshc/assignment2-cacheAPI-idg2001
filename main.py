@@ -76,10 +76,13 @@ def formcontacts():
     with open('data.json') as data:
         # Get the file
         file_data = json.load(data)
+        
         # Set headers
         headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-API-Key': 'post-key'
         }
+
         # Make request
         res = requests.post(os.environ['MAIN_API'] + '/contacts', json=file_data, headers=headers)
         # Return request
@@ -90,7 +93,7 @@ def formcontacts():
 # * GET route '/contacts/vcard' (vcard) – Get the file from cacheApi database or mainAPI database, depending on id the cacheAPI got the requested data.
 # * It also deletes everything in the collection after 10 days, to prevent buildup and loss of speed.  
 @app.route('/contacts_cache/vcard', methods=['GET'])
-def getVCard():
+def getVCardCache():
 
     # Check if data exists in cache database (the second collection (vCard_all))
     cache_data = list(collection2.find())
@@ -108,7 +111,14 @@ def getVCard():
 
     # If data is not found in cacheAPI database, get data from mainAPI 
     if not cache_data:
-        res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard')
+        
+        # Set headers
+        headers = {
+            'X-API-Key': 'get-key'
+        }   
+
+        # Send request with headers
+        res = requests.get(os.environ['MAIN_API'] + '/contacts/vcard', headers=headers)
        
         # Set the mainAPI data
         mainapi_data = res.json()
