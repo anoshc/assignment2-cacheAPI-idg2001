@@ -1,5 +1,11 @@
 # Denne parseren er inspirert fra IDG2001 Cloud Technologies Lab 3
-from database import collection2
+def get_address_fields(address):
+    return address.split(';')[2:]
+
+
+def set_address_fields(address_fields):
+    return address_fields + ['']*(5 - len(address_fields))
+
 
 # * This function finds a collection object based on id, and parses it from json to vcard
 def json_id_parser(id):
@@ -10,13 +16,12 @@ def json_id_parser(id):
     from bson.objectid import ObjectId
 
     # Load the JSON object from the MongoDB colelction
-    data = collection2.find_one({"_id": ObjectId(id)})
+    data = collection.find_one({"_id": ObjectId(id)})  
     
     # Create a vCard object
     vcard = vobject.vCard()
     
     # Set the properties from the MongoDB data
-    # The get() adds a default text if the item doesn't exist.
     vcard_properties = {
         'birthday': 'birthday',
         'version': 'version',
@@ -26,14 +31,16 @@ def json_id_parser(id):
         'tel': 'telefon',
         'email': 'email'
     }
+
+    # The get() adds a default text if the item doesn't exist.
     for vcard_property, mongo_property in vcard_properties.items():
         value = data.get(mongo_property, f'No {vcard_property.capitalize()}')
         vcard.add(vcard_property).value = value
 
     address = data.get('address')
     if address:
-        address_fields = address.split(';')[2:]
-        street, city, region, code, country = address_fields + ['']*(5 - len(address_fields))
+        address_fields = get_address_fields(address)
+        street, city, region, code, country = set_address_fields(address_fields)
         vcard.add('adr').value = vobject.vcard.Address(
             street=street, city=city, region=region, code=code, country=country
         )
@@ -44,6 +51,6 @@ def json_id_parser(id):
     # Combine the vCard strings into a single JSON string
     # Source: https://docs.python.org/3/library/json.html
     vcards_id_json = json.dumps(vcard_str, indent=2)
-    
+
     # Return the output so we can access it in the api
     return {"message" : vcards_id_json}
