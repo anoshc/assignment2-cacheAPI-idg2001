@@ -4,7 +4,7 @@ import os
 import json
 
 from flask import Flask, render_template, request, jsonify, send_file, make_response
-from flask.json import JSONEncoder
+# from flask.json import JSONEncoder
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
