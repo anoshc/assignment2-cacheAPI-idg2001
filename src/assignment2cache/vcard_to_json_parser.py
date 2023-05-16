@@ -1,14 +1,20 @@
 # Denne parseren er inspirert fra IDG2001 Cloud Technologies Lab 3
 def split_on_newlines(lines):
+
     return lines.split('\n')
 
+
 def split_on_colon(line):
+
     return line.split(':')
 
 # * This function takes the uploaded file as input, and parses it from vcard to json
-# Set the file as a parameter
-def vcard_parser( file ):   
-    
+
+    # Set the file as a parameter
+
+
+def vcard_parser(file):
+
     import json
 
     # Set the name of the files

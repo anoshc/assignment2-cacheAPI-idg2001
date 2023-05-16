@@ -12,15 +12,15 @@ def json_id_parser(id):
 
     import vobject
     import json
-    from database import collection
+    from assignment2cache.database import collection
     from bson.objectid import ObjectId
 
     # Load the JSON object from the MongoDB colelction
-    data = collection.find_one({"_id": ObjectId(id)})  
-    
+    data = collection.find_one({"_id": ObjectId(id)})
+
     # Create a vCard object
     vcard = vobject.vCard()
-    
+
     # Set the properties from the MongoDB data
     vcard_properties = {
         'birthday': 'birthday',

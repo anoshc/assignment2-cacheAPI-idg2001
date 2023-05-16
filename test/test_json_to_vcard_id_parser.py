@@ -5,10 +5,9 @@ import vobject
 from assignment2cache.json_to_vcard_id_parser import get_address_fields, set_address_fields
 
 
-# Testing the function 'get_address_fields' and check if it splits on the semicolons. 
+# Testing the function 'get_address_fields' and check if it splits on the semicolons.
 def test_get_address_fields():
     address = ";;One Microsoft Way;Redmond;WA;98052-6399;USA"
-    
     result = get_address_fields(address)
 
     # Assert the correctness of the serialization
@@ -25,7 +24,6 @@ def test_set_address_fields():
 
     # Define the expected result
     expected_result = ["One Microsoft Way", "Redmond", "", "", ""]
-
 
     # Assert that the Address object is created correctly
     assert result == expected_result
