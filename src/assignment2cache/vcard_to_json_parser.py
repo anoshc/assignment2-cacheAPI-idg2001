@@ -8,11 +8,9 @@ def split_on_colon(line):
 
     return line.split(':')
 
+
 # * This function takes the uploaded file as input, and parses it from vcard to json
-
-    # Set the file as a parameter
-
-
+# Set the file as a parameter
 def vcard_parser(file):
 
     import json
